@@ -11,6 +11,8 @@ This is a simple crawler for Steam Summer Sale 2012. It crawls these things:
 - Community Vote Results
 - Community Choice Sale
 
+It needs Python 2.7 or higher, but not Python 3. I'm developing it with Python 2.7.3
+
 Dependencies
 ------------
 
@@ -21,13 +23,13 @@ Dependencies
 How to use
 ----------
 
-Make your own config.py first, and run it!
+Install dependencies first, make your own config.py, and run it!
 
 ```
 python sss_crawler.py
 ```
 
-or throw it background!
+or throw it to background!
 
 ```
 python sss_crawler.py &
@@ -36,4 +38,4 @@ python sss_crawler.py &
 License
 -------
 
-This project follows [WTFPL](http://sam.zoy.org/wtfpl/). Please check out [COPYING](https://github.com/Saberre/steam-summer-sale-crawler/tree/master/COPYING) file.
+This project follows [WTFPL](http://sam.zoy.org/wtfpl/). Please check out [COPYING](https://github.com/Saberre/steam-summer-sale-crawler/blob/master/COPYING) file.

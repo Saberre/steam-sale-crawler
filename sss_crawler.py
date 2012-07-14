@@ -29,6 +29,8 @@ def parse_time_from_script(script_content):
 
 def parse_detail_link(link):
     m = link_re.match(link)
+    if m is None:
+        raise LookupError('Invalid link: %s' % (link))
     return {'kind': m.group(1), 'id': int(m.group(2))}
 
 def parse_app(app):
@@ -41,13 +43,22 @@ def parse_app(app):
     dc_div = app.find('div', {'class': 'discount'})
     price_span = dc_div.find_all('span')
     
-    ret = dict(parse_detail_link(app_link['href']))
+    try:
+        ret = dict(parse_detail_link(app_link['href']))
+    except LookupError as e:
+        raise LookupError(e)
     ret['name'] = app_link['title']
     ret['discount'] = int(dc_div.next_element.strip()[1:-1])
     ret['before_price'] = price_span[0].contents[0].strip()
     ret['now_price'] = price_span[1].contents[0].strip()
     ret['end_date'] = parse_time_from_script(app.script.contents[0])
     return ret
+
+def post_tweet(msg):
+    try:
+        api.update_status(msg)
+    except tweepy.error.TweepError as e:
+        logging.warn('Error while posting tweet: ' + str(e))
 
 def fetch_flash_sale(apps):
     for app in apps:
@@ -64,8 +75,7 @@ def fetch_flash_sale(apps):
     
         logging.info('Newly registering app id %d.' % (parsed_app['id']))
         end_datetime = datetime.fromtimestamp(parsed_app['end_date'])
-        api.update_status((u'#Steam여름세일 새로운 깜짝 할인: %(name)s %(before_price)s -%(discount)d%%-> %(now_price)s http://store.steampowered.com/%(kind)s/%(id)d/'
-                            % (parsed_app)) + u' %d일 %d시 %d분까지' % (end_datetime.day, end_datetime.hour, end_datetime.minute))
+        post_tweet(u'#Steam여름세일 새로운 깜짝 할인: %(name)s %(before_price)s -%(discount)d%%-> %(now_price)s http://store.steampowered.com/%(kind)s/%(id)d/' % (parsed_app) + u' %d일 %d시 %d분까지' % (end_datetime.day, end_datetime.hour, end_datetime.minute))
         cur.execute('INSERT INTO flash_sale VALUES (:id, :kind, :name, :discount, :before_price, :now_price, :end_date)', parsed_app)
     
     conn.commit()
@@ -83,7 +93,7 @@ def fetch_vote_candidates(vote_form):
     end_date = datetime.fromtimestamp(parse_time_from_script(vote_form.script.contents[0]))
     result = ', '.join(candidates)
     cur.execute('INSERT INTO vote_candidates VALUES (?, ?)', (vote_id, result, ))
-    api.update_status(u'#Steam여름세일 새로운 투표 후보들: %s http://store.steampowered.com/ %d일 %d시 %d분까지'
+    post_tweet(u'#Steam여름세일 새로운 투표 후보들: %s http://store.steampowered.com/ %d일 %d시 %d분까지'
                         % (result, end_date.day, end_date.hour, end_date.minute))
     conn.commit()
 
@@ -93,7 +103,7 @@ def fetch_vote_results(result_div):
     if last_timestamp is not None and last_timestamp[0] >= timestamp_now() - 2400:
         return
     
-    options = result_div.find_all('div', recursive=False)
+    options = result_div.find_all('div', recursive=False, limit=3)
     result = []
     for option in options:
         item = dict()
@@ -104,7 +114,7 @@ def fetch_vote_results(result_div):
     
     end_date = datetime.fromtimestamp(parse_time_from_script(result_div.script.contents[0]))
     result_str = ', '.join(result)
-    api.update_status(u'#Steam여름세일 투표 결과: %s http://store.steampowered.com/ 할인은 %d시 %d분부터 시작'
+    post_tweet(u'#Steam여름세일 투표 결과: %s http://store.steampowered.com/ 할인은 %d시 %d분부터 시작'
                         % (result_str, end_date.hour, end_date.minute))
     cur.execute('INSERT INTO vote_results VALUES (?, ?)', (timestamp_now(), result_str))
     conn.commit()
@@ -124,8 +134,7 @@ def fetch_community_choice(topvote_div, script):
     app['now_price'] = price_span[1].contents[0].strip()
     app['end_date'] = parse_time_from_script(script.contents[0])
     end_datetime = datetime.fromtimestamp(app['end_date'])
-    api.update_status(u'#Steam여름세일 새로운 커뮤니티 선택 할인: %(name)s %(before_price)s -%(discount)d%%-> %(now_price)s http://store.steampowered.com/%(kind)s/%(id)d/'
-                        % (app) + u' %d일 %d시 %d분까지' % (end_datetime.day, end_datetime.hour, end_datetime.minute))
+    post_tweet(u'#Steam여름세일 새로운 커뮤니티 선택 할인: %(name)s %(before_price)s -%(discount)d%%-> %(now_price)s http://store.steampowered.com/%(kind)s/%(id)d/' % (app) + u' %d일 %d시 %d분까지' % (end_datetime.day, end_datetime.hour, end_datetime.minute))
     cur.execute('INSERT INTO community_choice VALUES (:id, :kind, :name, :discount, :before_price, :now_price, :end_date)', app)
     conn.commit()
 
