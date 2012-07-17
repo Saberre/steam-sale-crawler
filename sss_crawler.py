@@ -30,7 +30,8 @@ def parse_time_from_script(script_content):
 def parse_detail_link(link):
     m = link_re.match(link)
     if m is None:
-        raise LookupError('Invalid link: %s' % (link))
+        logging.warn('Invalid link: %s' % (link))
+        raise LookupError
     return {'kind': m.group(1), 'id': int(m.group(2))}
 
 def parse_app(app):
@@ -39,7 +40,8 @@ def parse_app(app):
     
     app_link = app.find('a')
     if app_link is None:
-        raise LookupError('There is no link to an app or sub. It seems to be an empty space.')
+        logging.info('There is no link to an app or sub. It seems to be an empty space.')
+        raise LookupError
     dc_div = app.find('div', {'class': 'discount'})
     price_span = dc_div.find_all('span')
     
@@ -55,17 +57,18 @@ def parse_app(app):
     return ret
 
 def post_tweet(msg):
-    try:
-        api.update_status(msg)
-    except tweepy.error.TweepError as e:
-        logging.warn('Error while posting tweet: ' + str(e))
+    if not first_run:
+        try:
+            api.update_status(msg)
+        except tweepy.error.TweepError as e:
+            logging.warn('Error while posting tweet: ' + str(e))
+            logging.warn('The content of tweet was: ' + msg)
 
 def fetch_flash_sale(apps):
     for app in apps:
         try:
             parsed_app = parse_app(app)
         except LookupError as e:
-            logging.warn(e)
             continue
     
         cur.execute('SELECT COUNT(id) FROM flash_sale WHERE id = ?', (parsed_app['id'], ))
@@ -140,7 +143,7 @@ def fetch_community_choice(topvote_div, script):
 
 def do_job():
     try:
-        f = urllib2.urlopen('http://store.steampowered.com/')
+        f = urllib2.urlopen('http://store.steampowered.com/?cc=%s' % (config.COUNTRY_CODE))
     except urllib2.URLError as e:
         logging.warn(e)
         return
@@ -169,12 +172,14 @@ auth.set_access_token(config.ACCESS_TOKEN, config.ACCESS_TOKEN_SECRET)
 api = tweepy.API(auth)
 
 script_re = re.compile("InitDailyDealTimer\( \$\('\w+'\), ([0-9]+) \);")
-link_re = re.compile('http:\/\/store\.steampowered\.com\/(app|sub)\/([0-9]+)\/')
+link_re = re.compile('http:\/\/store\.steampowered\.com\/(app|sub)\/([0-9]+)')
 
 sched = Scheduler()
 sched.add_interval_job(do_job, minutes=2)
 try:
+    first_run = True
     do_job()
+    first_run = False
     sched.start()
     signal.pause()
 except KeyboardInterrupt:
