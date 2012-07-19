@@ -11,11 +11,12 @@ This is a simple crawler for Steam Summer Sale 2012. It crawls these things:
 - Community Vote Results
 - Community Choice Sale
 
-It needs Python 2.7 or higher, but not Python 3. I'm developing it with Python 2.7.3
+It's developed on Python 2.7.3, but also works on Python 2.6.5. Not compatible with Python 3.
 
 Dependencies
 ------------
 
+- [lxml](http://lxml.de/)
 - [Beautiful Soup 4](http://www.crummy.com/software/BeautifulSoup/)
 - [Advanced Python Scheduler](http://packages.python.org/APScheduler/)
 - [Tweepy](http://tweepy.github.com/)
@@ -23,7 +24,7 @@ Dependencies
 How to use
 ----------
 
-Install dependencies first, make your own config.py, and run it!
+Install dependencies first by running `pip install -r requirements.txt`, make your own config.py, and run it!
 
 ```
 python sss_crawler.py
