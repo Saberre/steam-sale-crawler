@@ -1,4 +1,0 @@
-lxml==2.3.4
-beautifulsoup4==4.1.1
-apscheduler==2.0.3
-tweepy==1.10
