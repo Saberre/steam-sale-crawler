@@ -1,0 +1,4 @@
+lxml
+pyquery
+apscheduler
+tweepy
